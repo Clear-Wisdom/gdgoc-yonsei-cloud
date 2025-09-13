@@ -31,22 +31,14 @@ resource "google_compute_subnetwork" "private_subnet" {
   region        = var.region
 }
 
-resource "google_compute_firewall" "allow_ssh" {
-  name    = "allow-ssh"
-  network = google_compute_network.vpc_network.name
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
-  }
-  source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["ssh-allowed"]
-}
-
 resource "google_compute_instance" "public_vm" {
   name         = var.public_vm_name
   machine_type = var.machine_type
   zone         = var.zone
-  tags         = ["ssh-allowed"]
+  
+  metadata = {
+    enable-oslogin = "TRUE"
+  }
 
   boot_disk {
     initialize_params {
@@ -61,13 +53,23 @@ resource "google_compute_instance" "public_vm" {
       // Public IP
     }
   }
+
+  service_account {
+    email  = google_service_account.vm_sa.email
+    scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+  }
 }
 
 resource "google_compute_instance" "private_vm" {
   name         = var.private_vm_name
   machine_type = var.machine_type
   zone         = var.zone
-  tags         = ["iap-ssh"]
+  
+  metadata = {
+    enable-oslogin = "TRUE"
+  }
 
   boot_disk {
     initialize_params {
@@ -78,6 +80,13 @@ resource "google_compute_instance" "private_vm" {
   network_interface {
     network    = google_compute_network.vpc_network.id
     subnetwork = google_compute_subnetwork.private_subnet.id
+  }
+
+  service_account {
+    email  = google_service_account.vm_sa.email
+    scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
   }
 }
 
@@ -105,7 +114,7 @@ resource "google_compute_router_nat" "nat" {
 
 resource "google_compute_firewall" "allow_iap_ssh" {
   name    = "allow-iap-ssh"
-  network = google_compute_network.vpc_network.name
+  network = google_compute_network.vpc_network.id
 
   allow {
     protocol = "tcp"
@@ -113,5 +122,10 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   }
 
   source_ranges = ["35.235.240.0/20"]
-  target_tags   = ["iap-ssh"]
+  target_service_accounts = [google_service_account.vm_sa.email]
+}
+
+resource "google_service_account" "vm_sa" {
+  account_id   = var.vm_service_account_id
+  display_name = "VM Service Account"
 }
