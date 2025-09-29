@@ -1,6 +1,6 @@
 const { Firestore } = require("@google-cloud/firestore");
 
-const firestore = new Firestore();
+const firestore = new Firestore({ databaseId: 'test-database' });
 const COLLECTION_NAME = "commentApp";
 const DOCUMENT_ID = "arS5HKzyajR0p1fVPbFj";
 
@@ -32,25 +32,6 @@ const getAllowedOrigin = (origin) => {
     return allowedOrigins[0];
 };
 
-const applyCors = (req, res) => {
-    const origin = getAllowedOrigin(req.get("Origin"));
-    res.set("Access-Control-Allow-Origin", origin);
-    res.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    );
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.set("Access-Control-Max-Age", "3600");
-};
-
-const handleOptions = (req, res) => {
-    if (req.method === "OPTIONS") {
-        applyCors(req, res);
-        return res.status(204).send("");
-    }
-    return false;
-};
-
 const toSerializableComment = (doc) => {
     const data = doc.data() || {};
     const createdAt = data.createdAt;
@@ -62,10 +43,17 @@ const toSerializableComment = (doc) => {
 };
 
 exports.update = async (req, res) => {
-    applyCors(req, res);
+    const origin = getAllowedOrigin(req.get("Origin"));
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    );
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Max-Age", "3600");
 
-    if (handleOptions(req, res)) {
-        return;
+    if (req.method === "OPTIONS") {
+        return res.status(204).send("");
     }
 
     if (!["PUT", "PATCH"].includes(req.method)) {
