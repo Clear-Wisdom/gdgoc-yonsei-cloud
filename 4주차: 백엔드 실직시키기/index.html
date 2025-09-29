@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>댓글 앱</title>
+        <style>
+            :root {
+                color-scheme: light dark;
+                font-family: "Pretendard", "Apple SD Gothic Neo", system-ui,
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                line-height: 1.5;
+                background-color: #f6f6f6;
+                color: #1f1f1f;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: flex;
+                justify-content: center;
+                background: linear-gradient(135deg, #fef6e4, #e0f2ff);
+            }
+
+            main {
+                width: min(720px, 100vw);
+                padding: 32px 24px;
+                box-sizing: border-box;
+            }
+
+            h1 {
+                margin-top: 0;
+                font-size: 2rem;
+                text-align: center;
+            }
+
+            form {
+                display: grid;
+                gap: 12px;
+                background-color: rgba(255, 255, 255, 0.85);
+                border-radius: 16px;
+                padding: 24px;
+                box-shadow: 0 20px 32px -18px rgba(15, 23, 42, 0.35);
+                backdrop-filter: blur(6px);
+            }
+
+            label {
+                font-weight: 600;
+            }
+
+            textarea {
+                resize: vertical;
+                min-height: 96px;
+                padding: 12px;
+                border: 1px solid rgba(148, 163, 184, 0.6);
+                border-radius: 8px;
+                font-size: 1rem;
+                line-height: 1.4;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            }
+
+            textarea:focus {
+                outline: none;
+                border-color: #2563eb;
+                box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+            }
+
+            button {
+                cursor: pointer;
+                appearance: none;
+                border: none;
+                border-radius: 8px;
+                font-size: 1rem;
+                font-weight: 600;
+                padding: 12px 20px;
+                background: linear-gradient(120deg, #2563eb, #3b82f6);
+                color: #fff;
+                transition: transform 0.18s ease, box-shadow 0.18s ease,
+                    filter 0.18s ease;
+            }
+
+            button:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 12px 20px -14px rgba(59, 130, 246, 0.6);
+                filter: brightness(1.05);
+            }
+
+            button:disabled {
+                cursor: progress;
+                background: #94a3b8;
+                box-shadow: none;
+                transform: none;
+            }
+
+            section.comments {
+                margin-top: 32px;
+                display: grid;
+                gap: 16px;
+            }
+
+            .comment-card {
+                display: grid;
+                gap: 8px;
+                padding: 20px;
+                border-radius: 14px;
+                background-color: rgba(255, 255, 255, 0.9);
+                box-shadow: 0 16px 28px -20px rgba(15, 23, 42, 0.4);
+                backdrop-filter: blur(5px);
+                position: relative;
+            }
+
+            .comment-meta {
+                font-size: 0.85rem;
+                color: #64748b;
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .comment-actions {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .comment-actions button {
+                background: #e2e8f0;
+                color: #1f2937;
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+
+            .comment-actions button.delete {
+                background: #fee2e2;
+                color: #b91c1c;
+            }
+
+            .empty-state,
+            .error-state {
+                text-align: center;
+                padding: 24px;
+                border-radius: 12px;
+                background-color: rgba(255, 255, 255, 0.75);
+                color: #475569;
+            }
+
+            .error-state {
+                border: 1px solid #f87171;
+                color: #b91c1c;
+            }
+
+            .status-banner {
+                margin-top: 16px;
+                padding: 12px 16px;
+                border-radius: 10px;
+                display: none;
+                font-size: 0.95rem;
+                background: rgba(59, 130, 246, 0.12);
+                color: #1d4ed8;
+            }
+
+            .status-banner.show {
+                display: block;
+            }
+
+            .status-banner.error {
+                background: rgba(248, 113, 113, 0.2);
+                color: #b91c1c;
+            }
+
+            @media (max-width: 540px) {
+                main {
+                    padding: 20px 16px;
+                }
+
+                form,
+                .comment-card {
+                    padding: 18px;
+                }
+
+                .comment-actions {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .comment-actions button {
+                    width: 100%;
+                    text-align: center;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>GCP 댓글 앱</h1>
+
+            <section>
+                <form id="comment-form">
+                    <label for="comment-content">댓글을 남겨보세요</label>
+                    <textarea
+                        id="comment-content"
+                        name="content"
+                        minlength="1"
+                        required
+                        placeholder="댓글 내용을 입력하세요"
+                    ></textarea>
+                    <button type="submit" id="submit-button">댓글 등록</button>
+                </form>
+                <div
+                    id="status"
+                    class="status-banner"
+                    role="status"
+                    aria-live="polite"
+                ></div>
+            </section>
+
+            <section class="comments">
+                <h2>댓글 목록</h2>
+                <div id="comments" aria-live="polite"></div>
+            </section>
+        </main>
+
+        <script>
+            // 각 API의 엔드포인트 URL을 입력해주세요.
+            const CREATE_API_ENDPOINT =
+                "https://create-357815453770.asia-northeast3.run.app";
+            const READ_API_ENDPOINT =
+                "https://read-357815453770.asia-northeast3.run.app";
+            const UPDATE_API_ENDPOINT =
+                "https://update-357815453770.asia-northeast3.run.app";
+            const DELETE_API_ENDPOINT =
+                "https://delete-357815453770.asia-northeast3.run.app";
+
+            const API_ENDPOINTS = {
+                create: CREATE_API_ENDPOINT,
+                read: READ_API_ENDPOINT,
+                update: UPDATE_API_ENDPOINT,
+                delete: DELETE_API_ENDPOINT,
+            };
+
+            const state = {
+                comments: [],
+                loading: false,
+            };
+
+            const commentsContainer = document.getElementById("comments");
+            const form = document.getElementById("comment-form");
+            const textarea = document.getElementById("comment-content");
+            const submitButton = document.getElementById("submit-button");
+            const statusBanner = document.getElementById("status");
+
+            const setStatus = (message, type = "info") => {
+                if (!message) {
+                    statusBanner.textContent = "";
+                    statusBanner.className = "status-banner";
+                    return;
+                }
+                statusBanner.textContent = message;
+                statusBanner.className = `status-banner show ${
+                    type === "error" ? "error" : ""
+                }`.trim();
+            };
+
+            const normalizeComment = (comment) => ({
+                id: comment.id,
+                content: comment.content,
+                createdAt: comment.createdAt ?? null,
+            });
+
+            const sortComments = (comments) =>
+                comments.sort((a, b) => {
+                    const aTime = a.createdAt
+                        ? new Date(a.createdAt).getTime()
+                        : 0;
+                    const bTime = b.createdAt
+                        ? new Date(b.createdAt).getTime()
+                        : 0;
+                    return aTime - bTime;
+                });
+
+            const renderComments = () => {
+                commentsContainer.innerHTML = "";
+
+                if (!state.comments.length) {
+                    commentsContainer.innerHTML =
+                        '<div class="empty-state">아직 댓글이 없어요. 가장 먼저 댓글을 남겨보세요!</div>';
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+
+                state.comments.forEach((comment) => {
+                    const card = document.createElement("article");
+                    card.className = "comment-card";
+                    card.dataset.id = comment.id;
+
+                    const content = document.createElement("p");
+                    content.textContent = comment.content;
+
+                    const meta = document.createElement("div");
+                    meta.className = "comment-meta";
+                    const createdDate = comment.createdAt
+                        ? new Date(comment.createdAt)
+                        : null;
+                    meta.innerHTML = `
+          <span>문서 ID: ${comment.id}</span>
+          <span>${
+              createdDate
+                  ? createdDate.toLocaleString("ko-KR")
+                  : "작성 시간 정보 없음"
+          }</span>
+        `;
+
+                    const actions = document.createElement("div");
+                    actions.className = "comment-actions";
+
+                    const editButton = document.createElement("button");
+                    editButton.type = "button";
+                    editButton.textContent = "수정";
+                    editButton.addEventListener("click", () =>
+                        handleEdit(comment)
+                    );
+
+                    const deleteButton = document.createElement("button");
+                    deleteButton.type = "button";
+                    deleteButton.textContent = "삭제";
+                    deleteButton.className = "delete";
+                    deleteButton.addEventListener("click", () =>
+                        handleDelete(comment)
+                    );
+
+                    actions.append(editButton, deleteButton);
+                    card.append(content, meta, actions);
+                    fragment.append(card);
+                });
+
+                commentsContainer.append(fragment);
+            };
+
+            const request = async (url, options = {}) => {
+                const response = await fetch(url, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                        ...(options.headers || {}),
+                    },
+                    ...options,
+                });
+
+                if (!response.ok) {
+                    const { error } = await response
+                        .json()
+                        .catch(() => ({ error: response.statusText }));
+                    throw new Error(error || "요청을 처리하지 못했습니다.");
+                }
+
+                return response.json().catch(() => ({}));
+            };
+
+            const refreshComments = async () => {
+                try {
+                    state.loading = true;
+                    const data = await request(API_ENDPOINTS.read, {
+                        method: "GET",
+                    });
+                    const comments = Array.isArray(data.comments)
+                        ? data.comments.map(normalizeComment)
+                        : [];
+                    state.comments = sortComments(comments);
+                    renderComments();
+                } catch (error) {
+                    console.error(error);
+                    setStatus(
+                        error.message || "댓글을 불러오지 못했습니다.",
+                        "error"
+                    );
+                    commentsContainer.innerHTML = `<div class="error-state">댓글을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.<br />${
+                        error.message ?? ""
+                    }</div>`;
+                } finally {
+                    state.loading = false;
+                }
+            };
+
+            const handleSubmit = async (event) => {
+                event.preventDefault();
+                const content = textarea.value.trim();
+                if (!content) {
+                    setStatus("댓글 내용을 입력해주세요.", "error");
+                    textarea.focus();
+                    return;
+                }
+
+                setStatus("댓글을 등록하는 중입니다…");
+                submitButton.disabled = true;
+
+                try {
+                    await request(API_ENDPOINTS.create, {
+                        method: "POST",
+                        body: JSON.stringify({ content }),
+                    });
+
+                    form.reset();
+                    setStatus("댓글이 등록되었습니다.");
+                    await refreshComments();
+                } catch (error) {
+                    console.error(error);
+                    setStatus(
+                        error.message || "댓글 등록 중 오류가 발생했습니다.",
+                        "error"
+                    );
+                } finally {
+                    submitButton.disabled = false;
+                }
+            };
+
+            const handleEdit = async (comment) => {
+                const nextContent = prompt(
+                    "수정할 댓글 내용을 입력하세요.",
+                    comment.content ?? ""
+                );
+                if (nextContent === null) {
+                    return;
+                }
+
+                const trimmed = nextContent.trim();
+                if (!trimmed) {
+                    setStatus("빈 댓글로 수정할 수 없습니다.", "error");
+                    return;
+                }
+
+                setStatus("댓글을 수정하는 중입니다…");
+
+                try {
+                    const data = await request(API_ENDPOINTS.update, {
+                        method: "PATCH",
+                        body: JSON.stringify({
+                            id: comment.id,
+                            content: trimmed,
+                        }),
+                    });
+
+                    const updated = normalizeComment(
+                        data.comment ?? {
+                            id: comment.id,
+                            content: trimmed,
+                            createdAt: comment.createdAt,
+                        }
+                    );
+                    const index = state.comments.findIndex(
+                        (item) => item.id === updated.id
+                    );
+                    if (index >= 0) {
+                        state.comments[index] = updated;
+                        sortComments(state.comments);
+                        renderComments();
+                    } else {
+                        await refreshComments();
+                    }
+
+                    setStatus("댓글이 수정되었습니다.");
+                } catch (error) {
+                    console.error(error);
+                    setStatus(
+                        error.message || "댓글 수정 중 오류가 발생했습니다.",
+                        "error"
+                    );
+                }
+            };
+
+            const handleDelete = async (comment) => {
+                const confirmed = confirm("정말로 이 댓글을 삭제할까요?");
+                if (!confirmed) {
+                    return;
+                }
+
+                setStatus("댓글을 삭제하는 중입니다…");
+
+                try {
+                    await request(API_ENDPOINTS.delete, {
+                        method: "DELETE",
+                        body: JSON.stringify({ id: comment.id }),
+                    });
+
+                    state.comments = state.comments.filter(
+                        (item) => item.id !== comment.id
+                    );
+                    renderComments();
+                    setStatus("댓글이 삭제되었습니다.");
+                } catch (error) {
+                    console.error(error);
+                    setStatus(
+                        error.message || "댓글 삭제 중 오류가 발생했습니다.",
+                        "error"
+                    );
+                }
+            };
+
+            form.addEventListener("submit", handleSubmit);
+            refreshComments();
+        </script>
+    </body>
+</html>
