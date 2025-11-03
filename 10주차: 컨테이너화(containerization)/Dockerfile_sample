@@ -1,0 +1,23 @@
+# 파일명: Dockerfile
+# FROM -> 이미지 지정
+FROM node:18-alpine
+
+# WORKDIR -> 아래의 명령어들을 수행하는 디렉토리 변경
+WORKDIR /app
+
+# COPY -> host에 있는 파일 복사하기
+COPY package*.json ./
+
+# RUN -> 명령어 실행
+RUN npm install
+
+# host에 있는 모든 파일 복사
+COPY . .
+
+# EXPOSE -> 3000번 포트를 열어서 listen하기
+# 이는 컨테이너의 포트를 여는 것으로, 나중에 호스트의 몇 번 포트를 열지는 명령어를 입력하면서 정해주어야 함
+EXPOSE 3000
+
+# 컨테이너에 실행될 때 사용될 명령어
+# node를 실행하기 위해 필요한 명령어임
+CMD ["node", "index.js"]

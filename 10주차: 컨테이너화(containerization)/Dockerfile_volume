@@ -1,0 +1,5 @@
+# 파일명: Dockerfile_volume
+FROM ubuntu:22.04
+WORKDIR /app
+VOLUME ["/app/data"]
+CMD ["bash"]
