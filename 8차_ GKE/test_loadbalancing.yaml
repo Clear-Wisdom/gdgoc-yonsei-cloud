@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello-server
+  template:
+    metadata:
+      labels:
+        app: hello-server
+    spec:
+      # 3개의 Pod를 3개의 다른 노드에 분산
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: hello-server
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: hello-app
+        # 1. arm64/amd64 모두 지원하는 샘플 이미지
+        image: us-docker.pkg.dev/google-samples/containers/gke/hello-app:1.0
+        ports:
+        - containerPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-server-svc
+spec:
+  # LoadBalancer로 외부에 노출
+  type: LoadBalancer
+  selector:
+    app: hello-server # 'app: hello-server' 라벨이 붙은 Pod에 연결
+  ports:
+  - protocol: TCP
+    port: 80       # 서비스 자체의 포트
+    targetPort: 8080 # Pod가 노출한 8080 포트
